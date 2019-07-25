@@ -1,0 +1,100 @@
+//
+char @text1 = "Press any key.";
+
+include "macros.ctx"
+
+struct system_colors
+  word frame            ; // dd ? ;nonset1
+  word grab             ; // dd ? ;nonset2
+  word work_3d_dark     ; // dd ?
+  word work_3d_light    ; // dd ?
+  word grab_text        ; // dd ? ;window_title
+  word work             ; // dd ?
+  word work_button      ; // dd ?
+  word work_button_text ; // dd ?
+  word work_text        ; // dd ?
+  word work_graph       ; // dd ?
+end
+
+void draw_window(char @text)
+
+  system_colors sc;
+
+  // функция 12: сообщить ОС о начале отрисовки
+  mcall2(12, 1);
+
+  // mcall 48, 3, sc,sizeof.system_colors
+  mcall4(48, 3, @sc, 40);
+
+/*
+    mov   edx, [sc.work]         ; цвет фона
+    or    edx, 0x33000000        ; и тип окна 3
+    mcall 0, <200,300>, <200,150>, , ,title
+*/
+  mcall(0, 200*0x10000+300, 200*0x10000+150, sc.work | 0x33000000, 0, "Sample program");
+
+/*
+    ; вывод текстовой строки
+    mov   ecx, [sc.work_text]    ; цвет фона
+    or    ecx, 0x90000000        ; и тип строки
+    mcall 4, <10, 20>, , message
+*/
+  mcall4(4, 10*0x10000+20, sc.work_text | 0x90000000, @text);
+
+  // функция 12.2, закончили рисовать
+  mcall2(12, 2);
+
+end
+
+void key()
+  char v[3];
+  v[0] = #0x90;
+  v[2] = #0;
+  byte k = mcall1(2);
+  char @x = @str(k);
+  v[1] = x;
+  mcall3(55, 55, @v);
+end
+
+void button()
+  word b = mcall1(17);
+  if b/0x100 = 1 then
+    mcall1(-1);
+  end
+end
+
+begin
+
+  while 1=1 do
+    draw_window(@text1);
+
+    word c = mcall1(10);
+
+    select
+//      case c = 1:
+//        draw_window();
+      case c = 2:
+        key();
+      case c = 3:
+        button();
+    end
+  end
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

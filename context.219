@@ -1,3 +1,4 @@
+//
 define @eWRONGPARM       "Неизвестный паpаметp"                        // Wrong parameter
 define @eLONGFILENAME    "Слишком длинное имя файла"                   // FileName too long
 define @eNOFILE          "Невозможно откpыть файл"                     // Can't open file
@@ -62,6 +63,8 @@ define  cDATA        4 // Глобальная пеpеменная
 define  cFUNC        5 // Функция
 define  cLIB         6 // Библиотека
 define  cFILE        7 // Включаемый файл
+// qeos +++
+define  cASM         8 // Включение ассемблерного кода
 
 define  sBASE        0 // Базовый тип
 define  sSTRUCT      1 // Стpуктуpа
@@ -129,6 +132,8 @@ define  iPUSH       49 // Пеpедача паpаметpа
 define  iASSIGN     50 // Пpисваивание
 define  iINLINE     51 // Вставка кода
 define  iRETURN     52 // Возвpат
+// qeos +++
+define  iASM        53 // Ассемблерная вставка
 
 
 define  pZERO        0 // Нулевой пpиоpитет
@@ -300,7 +305,6 @@ end
 void     halt(word Code)                    // 11.02.2007
   ExitProcess(1);
 end
-
 
 // Функции ввода/вывода (Linux)
 /*
@@ -656,6 +660,14 @@ void     Next()
 
   inc nCol;                                 // 24.03.2007
   inc pText;
+end
+
+void     Prev()
+  nFile0=nFile;
+  fFile =0;
+
+  dec nCol;
+  dec pText;
 end
 
 
@@ -1216,7 +1228,7 @@ word     Expr(word Prty; word @pType, @nPtr; char @Buff)
       word pIndx=0;
       word nIndx=0;
       if Flag=0 then
-        if strcmp(@Buff,"~"")=0 then
+        if strcmp(@Buff,"~"")=0 then //"
           if nPtr>0 then
             Stop(@eSTRING);
           end
@@ -2387,6 +2399,119 @@ word     Ctrl(char @Buff)
         Test(Dict[pFunc].pType,Dict[pFunc].nPtr,pType2,nPtr2,@Node[P1].pLeft);
       end
 
+    // qeos +++
+    case strcmp(@Buff, "asm")=0:
+      word P3;
+      word P2=P1;
+
+      while 1=1 do
+        while Read()='~n' | Read()='~r' do
+          Next();
+        end
+        word sText = pText;
+        word sChar = nChar;
+        while strcmp(@Buff, "end")!=0 do
+          Scan(@Buff);
+          if strcmp(@Buff, "%")=0 then
+            if (nDict >= nDICT) then
+              Stop(@eNOMEMORY);
+            end
+
+            Dict[nDict].pType = Find("char");
+            Dict[nDict].nPtr = 1;
+            Dict[nDict].pIndx = sText;
+
+            word eText = pText - 2;
+            word seText = pText;
+            pText = sText;
+            while (pText <= eText) do
+              if (nChar >= nCHAR) then
+                Stop(@eNOMEMORY);
+              end
+              Char[nChar] = Read();
+              inc nChar;
+              Next();
+            end
+            pText = seText;
+            sText = seText;
+
+            if (nChar >= nCHAR) then
+              Stop(@eNOMEMORY);
+            end
+            Char[nChar] = #0;
+            inc nChar;
+            Dict[nDict].nIndx = sChar;
+            Dict[nDict].Class = cASM;     strcpy(@Dict[nDict].Name, "inlineAsm");
+            Dict[nDict].Flag = 0;
+
+            word pType2, nPtr2;
+
+            Node[P1].pLeft = Expr(pZERO, @pType2, @nPtr2, @Scan(@Buff));
+            Node[P1].ID = iASM;
+            Node[P1].Value = nDict;
+
+            P3 = Peek();
+            Node[P1].pRight = P3;
+            P1 = P3;
+
+            inc nDict;
+
+            sText = pText;
+
+            sChar = nChar;
+
+            loop
+
+          end
+        end
+        Prev();
+        while (Read() != '~n' & Read() != '~r') do
+          Prev();
+        end
+        word eText = pText;
+        pText = sText;
+        while (pText <= eText) do
+          if (nChar >= nCHAR) then
+            Stop(@eNOMEMORY);
+          end
+          Char[nChar] = Read();
+          inc nChar;
+          Next();
+        end
+        Scan(@Buff);
+        if (nChar >= nCHAR) then
+          Stop(@eNOMEMORY);
+        end
+        Char[nChar] = #0;
+        inc nChar;
+        if (nDict >= nDICT) then
+          Stop(@eNOMEMORY);
+        end
+
+        word cDict = nDict;
+        if (nDict >= nDICT) then
+          Stop(@eNOMEMORY);
+        end
+
+        Dict[nDict].pType = Find("char");
+        Dict[nDict].nPtr = 1;
+        Dict[nDict].pIndx = sText;
+        Dict[nDict].nIndx = sChar;
+
+        Dict[nDict].Class = cASM;     strcpy(@Dict[nDict].Name, "inlineAsm");
+        Dict[nDict].Flag = 0;
+
+        Node[P1].ID = iASM;
+        Node[P1].Value = nDict;
+
+        inc nDict;
+
+        P1 = P2;
+
+        exit
+      end
+
+    // qeos ---
     case strcmp(@Buff,"null")=0:
       Node[P1].ID   =iEMPTY;
 
@@ -2529,6 +2654,15 @@ void     Decl(char @Inst)
 
   Save('~r');
   Save('~n');
+end
+
+
+void     DeclNR(char @Inst)
+  word   I=0;
+  while  Inst[I]!=#0 do
+    Save(Inst[I]);
+    inc  I;
+  end
 end
 
 
@@ -4041,6 +4175,15 @@ word     Code(word P; word F; word T; word M)
         Emit(0,@strcat(@strcpy(@Buff,"ret     "),@str(pSize)));
       end
 
+    // qeos +++
+    case Node[P].ID=iASM:
+      word E = Node[P].Value;
+      DeclNR(@strcpy(@Buff, @Char[Dict[E].nIndx]));
+      if (Node[P].pLeft < nNODE) then
+        Code(Node[P].pLeft, 0, 0, 0);
+      end
+
+    // qeos ---
     case Node[P].ID=iINLINE:                // 11.02.2007
       Emit(0,@strcat(@strcpy(@Buff,"db      0x"),@str2(Node[P].Value,16)));
 
@@ -4215,7 +4358,6 @@ word     Code(word P; word F; word T; word M)
   return nDICT;
 end
 
-
 void Main(char @Name)
   nDict=0;                                  // Инициализация счетчиков
   nParm=0;
@@ -4271,6 +4413,8 @@ void Main(char @Name)
   Word("exit");
   Word("inc");
   Word("dec");
+  // qeos +++
+  Word("asm");
   Word("inline");                           // 11.02.2007
   Word("return");
   Word("null");
@@ -4501,7 +4645,7 @@ void Main(char @Name)
             end
 
           default:
-            if strcmp(@Buff,"~"")!=0 then
+            if strcmp(@Buff,"~"")!=0 then //"
               Stop(@eQUOTEXP);
             end
 
@@ -5573,4 +5717,5 @@ begin
   strcpy(@Name[pExt],".asm");
 
   Main  (@Name);
+
 end

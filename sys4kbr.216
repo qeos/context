@@ -1,8 +1,32 @@
 //
+// qeos +++
+
+define nFILEINFO  100;
+
+
 char     separator()
   return '/';
 end
 
+struct FILEINFO
+  word func;        // номер подфункции
+  word offset_lo;   // смещение в файле или папке
+  word offset_hi;   // старшая часть смещения или поле флагов
+  word data_len;    // размер данных
+  word data_h;      // указатель на данные
+  word file_name;   // текстовая строка - путь к файлу, заканчивается нулём
+end
+
+FILEINFO FileInfo[nFILEINFO];
+word nFileInfo;
+
+word     _open(char @Name)
+//  strcpy(FileInfo[nFileInfo].file_name, @Name);
+
+  inc nFileInfo;
+
+  return nFileInfo-1;
+end
 
 word     open(char @Name)
   inline $B8, $05, $00, $00, $00;           // mov     EAX,   5

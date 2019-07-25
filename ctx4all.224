@@ -23,6 +23,8 @@ define  cLIB         6 // Б®°Ђ®Ѓв•™†
 /*
 define  cFILE        7 // В™Ђоз†•ђл© д†©Ђ
 */
+// qeos +++
+define  cASM         8 // В™Ђоз•≠®• †бб•ђ°Ђ•а≠Ѓ£Ѓ ™Ѓ§†
 
 define  sBASE        0 // Б†ІЃҐл© в®ѓ
 define  sSTRUCT      1 // Свpг™вгp†
@@ -89,8 +91,10 @@ define  iDEC        48 // Д•™p•ђ•≠в
 define  iPUSH       49 // П•p•§†з† ѓ†p†ђ•вp†
 define  iASSIGN     50 // Пp®бҐ†®Ґ†≠®•
 define  iINLINE     51 // Вбв†Ґ™† ™Ѓ§†
-define  iASM        52 // Вбв†Ґ™† †бб•ђ°Ђ•p≠Ѓ© ™Ѓђ†≠§л
+define  iASM2        52 // Вбв†Ґ™† †бб•ђ°Ђ•p≠Ѓ© ™Ѓђ†≠§л
 define  iRETURN     53 // ВЃІҐp†в
+// qeos +++
+define  iASM        54 // Абб•ђ°Ђ•а≠†п Ґбв†Ґ™†
 
 
 define  pZERO        0 // НгЂ•ҐЃ© ѓp®Ѓp®в•в
@@ -105,6 +109,8 @@ define  pLVALUE      6 // Пp®Ѓp®в•в LVALUE
 define  tPE          1 // PE  (Windows95/NT)
 define  tELF         2 // ELF (Linux)
 define  tBIN         3 // BIN (binary)
+// qeos +++
+define  tKBR         4
 
 define  mNONE        0
 define  mCON         1
@@ -490,6 +496,14 @@ void     Next()
   inc pText;
 end
 
+void     Prev()
+  nFile0=nFile;
+  fFile =0;
+
+  dec nCol;
+  dec pText;
+end
+
 
 char     Sign()
   char Ch=Read();
@@ -793,6 +807,12 @@ void     Test(word pType1, nPtr1; word pType2, nPtr2; word @P)
     case pType1=pType2 & nPtr1=nPtr2:
       return
 
+    // qeos +++
+    case pType1=Find("word") & nPtr1=0 & nPtr2=1:
+      Cast(pType1,pType2,@P);
+      return
+    // qeos ---
+
     case pType1=Find("byte") & nPtr1=0 & pType2=Find("word") & nPtr2=0:
       return
 
@@ -1048,7 +1068,7 @@ word     Expr(word Prty; word @pType, @nPtr; char @Buff)
       word pIndx=0;
       word nIndx=0;
       if Flag=0 then
-        if strcmp(@Buff,"~"")=0 then
+        if strcmp(@Buff,"~"")=0 then //"
           if nPtr>0 then
             Stop(@eSTRING);
           end
@@ -2260,7 +2280,7 @@ word     Ctrl(char @Buff)
       end
 
     case strcmp(@Buff,"asm2")=0:            // 19.10.2008
-      Node[P1].ID   =iASM;
+      Node[P1].ID   =iASM2;
       Node[P1].Value=nChar;
 
       while Read()='~n' | Read()='~r' | Read()='~t' | Read()=' ' do
@@ -2355,6 +2375,119 @@ word     Ctrl(char @Buff)
         Test(Dict[pFunc].pType,Dict[pFunc].nPtr,pType2,nPtr2,@Node[P1].pLeft);
       end
 
+    // qeos +++
+    case strcmp(@Buff, "asm")=0:
+      word P3;
+      word P2=P1;
+
+      while 1=1 do
+        while Read()='~n' | Read()='~r' do
+          Next();
+        end
+        word sText = pText;
+        word sChar = nChar;
+        while strcmp(@Buff, "end")!=0 do
+          Scan(@Buff);
+          if strcmp(@Buff, "%")=0 then
+            if (nDict >= nDICT) then
+              Stop(@eNOMEMORY);
+            end
+
+            Dict[nDict].pType = Find("char");
+            Dict[nDict].nPtr = 1;
+            Dict[nDict].pIndx = sText;
+
+            word eText = pText - 2;
+            word seText = pText;
+            pText = sText;
+            while (pText <= eText) do
+              if (nChar >= nCHAR) then
+                Stop(@eNOMEMORY);
+              end
+              Char[nChar] = Read();
+              inc nChar;
+              Next();
+            end
+            pText = seText;
+            sText = seText;
+
+            if (nChar >= nCHAR) then
+              Stop(@eNOMEMORY);
+            end
+            Char[nChar] = #0;
+            inc nChar;
+            Dict[nDict].nIndx = sChar;
+            Dict[nDict].Class = cASM;     strcpy(@Dict[nDict].Name, "inlineAsm");
+            Dict[nDict].Flag = 0;
+
+            word pType2, nPtr2;
+
+            Node[P1].pLeft = Expr(pZERO, @pType2, @nPtr2, @Scan(@Buff));
+            Node[P1].ID = iASM;
+            Node[P1].Value = nDict;
+
+            P3 = Peek();
+            Node[P1].pRight = P3;
+            P1 = P3;
+
+            inc nDict;
+
+            sText = pText;
+
+            sChar = nChar;
+
+            loop
+
+          end
+        end
+        Prev();
+        while (Read() != '~n' & Read() != '~r') do
+          Prev();
+        end
+        word eText = pText;
+        pText = sText;
+        while (pText <= eText) do
+          if (nChar >= nCHAR) then
+            Stop(@eNOMEMORY);
+          end
+          Char[nChar] = Read();
+          inc nChar;
+          Next();
+        end
+        Scan(@Buff);
+        if (nChar >= nCHAR) then
+          Stop(@eNOMEMORY);
+        end
+        Char[nChar] = #0;
+        inc nChar;
+        if (nDict >= nDICT) then
+          Stop(@eNOMEMORY);
+        end
+
+        word cDict = nDict;
+        if (nDict >= nDICT) then
+          Stop(@eNOMEMORY);
+        end
+
+        Dict[nDict].pType = Find("char");
+        Dict[nDict].nPtr = 1;
+        Dict[nDict].pIndx = sText;
+        Dict[nDict].nIndx = sChar;
+
+        Dict[nDict].Class = cASM;     strcpy(@Dict[nDict].Name, "inlineAsm");
+        Dict[nDict].Flag = 0;
+
+        Node[P1].ID = iASM;
+        Node[P1].Value = nDict;
+
+        inc nDict;
+
+        P1 = P2;
+
+        exit
+      end
+
+    // qeos ---
     case strcmp(@Buff,"null")=0:
       Node[P1].ID   =iEMPTY;
 
@@ -2497,6 +2630,15 @@ void     Decl(char @Inst)
 
   Save('~r');
   Save('~n');
+end
+
+
+void     DeclNR(char @Inst)
+  word   I=0;
+  while  Inst[I]!=#0 do
+    Save(Inst[I]);
+    inc  I;
+  end
 end
 
 
@@ -3179,7 +3321,9 @@ word     Code(word P; word F; word T; word M)
             //Emit(0,@strcat(@strcpy(@Buff,"call    "),@Dict[Node[P1].Value].Name));                     // TASM
               Emit(0,@strcat(@strcat(@strcpy(@Buff,"call   [@"),@str(Dict[Node[P1].Value].Value)),"]")); // FASM
             else
-              Emit(0,@strcat(@strcpy(@Buff,"call    @"),@str(Dict[Node[P1].Value].Value)));
+              // qeos +++
+              //Emit(0,@strcat(@strcpy(@Buff,"call    @"),@str(Dict[Node[P1].Value].Value)));
+              Emit(0,@strcat(@strcat(@strcat(@strcpy(@Buff, "call    @"),@str(Dict[Node[P1].Value].Value)), "    ; "), @Dict[Node[P1].Value].Name));
             end
 
             ID =iCALL;
@@ -3530,6 +3674,11 @@ word     Code(word P; word F; word T; word M)
     case iCAST:
       word pType=Code(Node[Node[P].pLeft].pLeft,0,0,0);
       select
+        // qeos +++
+        case pType=nDICT:
+          return  Node[P].Value;
+        // qeos ---
+
         case Node[P].Value=Find("void") & pType=Find("word"):                // 16.10.2008
           return  Node[P].Value;
 
@@ -4080,6 +4229,10 @@ word     Code(word P; word F; word T; word M)
           //TODO
             null
 
+          // qeos +++
+          case tKBR:
+            null
+
           default:
             Stop(@eINTERNAL);
         end
@@ -4090,7 +4243,7 @@ word     Code(word P; word F; word T; word M)
     case iINLINE:                           // 11.02.2007
       Emit(0,@strcat(@strcpy(@Buff,"db      0x"),@str2(Node[P].Value,16)));
 
-    case iASM:
+    case iASM2:
       word  P=Node[P].Value;
       if      Char[P]='@' then
         Decl(@Char[P]);
@@ -4098,6 +4251,15 @@ word     Code(word P; word F; word T; word M)
         Emit(0, @Char[P]);
       end
 
+    // qeos +++
+    case iASM:
+      word E = Node[P].Value;
+      DeclNR(@strcpy(@Buff, @Char[Dict[E].nIndx]));
+      if (Node[P].pLeft < nNODE) then
+        Code(Node[P].pLeft, 0, 0, 0);
+      end
+
+    // qeos ---
     case iSEQUENCE:
       word nParm1=nParm;
       word pVar1 =pVar;
@@ -4335,6 +4497,11 @@ void     Main(char @Name, @Dest)
       Target=tBIN;
       Mode  =mNONE;
 
+    // qeos +++
+    case strcmp(@Dest,"/k")=0:
+      Target=tKBR;
+      Mode  =mNONE;
+
     default:
       if strlen(@Dest)>0 then
       //puts("Н•®ІҐ•бв≠л© ѓ†p†ђ•вp~r~n");
@@ -4382,6 +4549,10 @@ void     Main(char @Name, @Dest)
     case tBIN:
       strcpy(@Text,"define @COMPILER ~"Context 2.0~"~r~n");
 
+    // qeos +++
+    case tKBR:
+      strcpy(@Text,"define @COMPILER ~"Context 2.0 for Kolibri~"~r~n");
+
     default:
       Stop(@eINTERNAL);
   end
@@ -4422,6 +4593,8 @@ void     Main(char @Name, @Dest)
   Word("dec");
   Word("inline");                           // 11.02.2007
   Word("asm2");                             // 19.10.2008
+  // qeos +++
+  Word("asm");
   Word("return");
   Word("null");
   Word("NULL");
@@ -4676,7 +4849,7 @@ void     Main(char @Name, @Dest)
             end
 
           default:
-            if strcmp(@Buff,"~"")!=0 then
+            if strcmp(@Buff,"~"")!=0 then //"
               Stop(@eQUOTEXP);
             end
 
@@ -5075,6 +5248,10 @@ void     Main(char @Name, @Dest)
     //Emit(0,@strcat(@strcpy(@Buff,"jmp     @"),@str(S)));
       null
 
+    // qeos +++
+    case Target=tKBR:
+      null
+
     default:
       Stop(@eINTERNAL);
   end
@@ -5091,7 +5268,9 @@ void     Main(char @Name, @Dest)
     inc I;
   end
 
-  if Target!=tBIN then                                // 19.10.2008
+  // qeos +++
+  //if Target!=tBIN then                                // 19.10.2008
+  if Target!=tBIN & Target!=tKBR then                                // 19.10.2008
     Decl("");
   end
 
@@ -5107,6 +5286,10 @@ void     Main(char @Name, @Dest)
       Decl("segment readable executable");            // FASM 1.66
 
     case tBIN:
+      null
+
+    // qeos +++
+    case tKBR:
       null
 
     default:
@@ -5181,6 +5364,22 @@ void     Main(char @Name, @Dest)
   select
     case Target=tBIN:
       Emit(0,"use32");
+      Emit(0,@strcat(@strcpy(@Buff,"jmp     @"),@str(Dict[pMain].Value)));
+    case Target=tKBR:
+      Emit(0,"use32");
+      Emit(0,"org 0");
+      Emit(0,"");
+      Emit(0,"  db     'MENUET01'  ; 8-байтный идентификатор MenuetOS");
+      Emit(0,"  dd     1           ; верси€ заголовка (всегда 1)");
+      Emit(0,"  dd     START       ; адрес первой команды");
+      Emit(0,"  dd     I_END       ; размер программы");
+      Emit(0,"  dd     MEM         ; количество пам€ти");
+      Emit(0,"  dd     STACKTOP    ; адрес вершины стэка");
+      Emit(0,"  dd     0           ; адрес буфера дл€ параметров");
+      Emit(0,"  dd     0           ; зарезервировано");
+      Emit(0,"");
+      Emit(0,"include ~"macros.inc~" ; макросы облегчают жизнь ассемблерщиков!");
+      Emit(0,"START:");
       Emit(0,@strcat(@strcpy(@Buff,"jmp     @"),@str(Dict[pMain].Value)));
   end
 
@@ -5299,6 +5498,10 @@ void     Main(char @Name, @Dest)
       Decl("segment readable writeable");            // FASM 1.66
 
     case tBIN:
+      null
+
+    // qeos +++
+    case tKBR:
       null
 
     default:
@@ -5498,9 +5701,28 @@ void     Main(char @Name, @Dest)
 
       Decl("");
       Decl("section ~".reloc~" fixups data readable discardable");
+    // qeos +++
+    case Target=tKBR:
+      Emit(0,"");
+      Emit(0,"I_END:                  ; метка конца программы");
+      Emit(0,"  rb 4096               ; пам€ть дл€ стека");
+      Emit(0,"align 16");
+      Emit(0,"STACKTOP:               ; метка вершины стека (при заполнении стек");
+      Emit(0,"                        ; растет в сторону уменьшени€ адресов, потому");
+      Emit(0,"                        ; пам€ть дл€ него в коде программы встречаетс€");
+      Emit(0,"                        ; раньше чем его вершина)");
+      Emit(0,"MEM:                    ; метка указывающа€ на конец программы плюс");
+      Emit(0,"                        ; размер используемой ею оперативной пам€ти");
+      Emit(0,"; јдрес метки MEM всегда должен быть больше чем адрес метки I_END.");
+      Emit(0,"; ћетка STACKTOP должна располагаетс€ после метки I_END и перед меткой");
+      Emit(0,";   MEM. STACKTOP может находитс€ и перед I_END, но это не правильно.");
+      Emit(0,"; »мена меток могут быть с любыми названи€ми, главное соблюдать");
+      Emit(0,";   правильный пор€док их расположени€.");
   end
 
-  if Target!=tBIN then                                // 19.10.2008
+  // qeos +++
+  //if Target!=tBIN then                                // 19.10.2008
+  if Target!=tBIN & Target!=tKBR then                                // 19.10.2008
     Decl("");
     Emit(0,@strcat(@strcpy(@Buff,"entry   @"),@str(S)));
   end

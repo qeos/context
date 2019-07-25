@@ -1,7 +1,7 @@
 //
-include "msg4lnx.223"
-include "sys4lnx.216"
-include "ctx4all.223"
+include "msg4kbr.223"
+include "sys4kbr.216"
+include "ctx4all.224"
 
 
 begin
@@ -48,6 +48,8 @@ begin
     puts("                /w  - Win32 gui~r~n");
     puts("                /l  - Linux~r~n");
     puts("                /b  - binary~r~n");
+    // qeos +++
+    puts("                /k  - Kolibri~r~n");
 
     return
   end

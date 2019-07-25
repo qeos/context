@@ -1,0 +1,64 @@
+//
+
+word mcall(word a,b,c,d,e,f)
+  asm
+    mcall dword [EBP+8], dword [EBP+12], dword [EBP+16], dword [EBP+20], dword [EBP+24], dword [EBP+28]
+  end
+end
+
+word mcall1(word a)
+  mcall(a, 0, 0, 0, 0, 0);
+end
+
+word mcall2(word a,b)
+  mcall(a, b, 0, 0, 0, 0);
+end
+
+word mcall3(word a,b,c)
+  mcall(a, b, c, 0, 0, 0);
+end
+
+word mcall4(word a,b,c,d)
+  mcall(a, b, c, d, 0, 0);
+end
+
+word mcall5(word a,b,c,d,e)
+  mcall(a, b, c, d, e, 0);
+end
+
+
+char    @str2(word N; word P)               // 11.02.2007
+//char @Buff ="0000000000";                 // 10 знаков (max 2**32-1=4294967295)
+  char @Buff ="10987654321098765432109876543210";
+  char @Digit="0123456789ABCDEF";
+
+  word   I=0;
+  while  N>0 | I=0 do
+  //Buff[I]=Digit[N%10];
+    Buff[I]=Digit[N%P];
+    inc  I;
+
+  //N=N/10;
+    N=N/P;
+  end
+
+  Buff[I]=#0;
+
+  word J=0;
+  word K=I-1;
+  while J<K do
+    char C =Buff[J];
+    Buff[J]=Buff[K];
+    Buff[K]=C;
+
+    dec  K;
+    inc  J;
+  end
+
+  return @Buff;
+end
+
+
+char    @str(word N)
+  return @str2(N,10);
+end
